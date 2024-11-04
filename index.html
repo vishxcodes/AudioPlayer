@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Audio Player</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a1a1a;
+        }
+        .background {
+            position: absolute;
+            top: -5%;
+            left: -5%;
+            width: 110%;
+            height: 110%;
+            background-size: cover;
+            background-position: center;
+            filter: blur(20px);
+            opacity: 0.5;
+            transition: background-image 0.5s ease;
+        }
+        .player {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            width: 300px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .cover-art {
+            width: 100%;
+            height: 300px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .cover-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .song-info {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        .song-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .artist {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 15px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            outline: none;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+        .btn:hover::before {
+            width: 120%;
+            height: 120%;
+        }
+        .btn:active::before {
+            width: 95%;
+            height: 95%;
+        }
+        #playPauseBtn {
+            font-size: 36px;
+        }
+        .progress-container {
+            background: rgba(255, 255, 255, 0.1);
+            height: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .progress {
+            background: #1db954;
+            height: 100%;
+            width: 0%;
+            border-radius: 5px;
+            transition: width 0.1s linear;
+        }
+        .time {
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="background" id="background"></div>
+        <div class="player">
+            <div class="cover-art">
+                <img id="cover" src="/placeholder.svg?height=300&width=300" alt="Song cover">
+            </div>
+            <div class="song-info">
+                <div class="song-title" id="title">Awesome Song</div>
+                <div class="artist" id="artist">Cool Artist</div>
+            </div>
+            <div class="controls">
+                <button class="btn" id="prevBtn" aria-label="Previous song">&#10094;</button>
+                <button class="btn" id="playPauseBtn" aria-label="Play or pause">&#9654;</button>
+                <button class="btn" id="nextBtn" aria-label="Next song">&#10095;</button>
+            </div>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="time">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+            <audio id="audio"></audio>
+        </div>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const progress = document.getElementById('progress');
+        const progressContainer = document.getElementById('progressContainer');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const titleEl = document.getElementById('title');
+        const artistEl = document.getElementById('artist');
+        const coverEl = document.getElementById('cover');
+        const backgroundEl = document.getElementById('background');
+
+        const songs = [
+            {
+                title: "Can't Feel My Face",
+                artist: "The Weeknd",
+                cover: "./cover01.jpg",
+                audio: "./song1.mp3"
+            },
+            {
+                title: "WHY",
+                artist: "Talha Anjum",
+                cover: "./cover02.jpg",
+                audio: "./song2.mp3"
+            },
+            {
+                title: "Sifar Safar",
+                artist: "Karan Aujla",
+                cover: "./cover03.jpg",
+                audio: "./song3.mp3"
+            }
+        ];
+
+        let currentSongIndex = 0;
+
+        function loadSong(index) {
+            const song = songs[index];
+            titleEl.textContent = song.title;
+            artistEl.textContent = song.artist;
+            coverEl.src = song.cover;
+            audio.src = song.audio;
+            backgroundEl.style.backgroundImage = `url(${song.cover})`;
+        }
+
+        function togglePlayPause() {
+            if (audio.paused) {
+                audio.play();
+                playPauseBtn.innerHTML = '&#9208;';
+                playPauseBtn.setAttribute('aria-label', 'Pause');
+            } else {
+                audio.pause();
+                playPauseBtn.innerHTML = '&#9654;';
+                playPauseBtn.setAttribute('aria-label', 'Play');
+            }
+        }
+
+        function playNextSong() {
+            currentSongIndex = (currentSongIndex + 1) % songs.length;
+            loadSong(currentSongIndex);
+            audio.play();
+            playPauseBtn.innerHTML = '&#9208;';
+            playPauseBtn.setAttribute('aria-label', 'Pause');
+        }
+
+        function playPreviousSong() {
+            currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
+            loadSong(currentSongIndex);
+            audio.play();
+            playPauseBtn.innerHTML = '&#9208;';
+            playPauseBtn.setAttribute('aria-label', 'Pause');
+        }
+
+        function updateProgress(e) {
+            const { duration, currentTime } = e.srcElement;
+            const progressPercent = (currentTime / duration) * 100;
+            progress.style.width = `${progressPercent}%`;
+            currentTimeEl.textContent = formatTime(currentTime);
+            durationEl.textContent = formatTime(duration);
+        }
+
+        function setProgress(e) {
+            const width = this.clientWidth;
+            const clickX = e.offsetX;
+            const duration = audio.duration;
+            audio.currentTime = (clickX / width) * duration;
+        }
+
+        function formatTime(time) {
+            const minutes = Math.floor(time / 60);
+            const seconds = Math.floor(time % 60);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        prevBtn.addEventListener('click', playPreviousSong);
+        nextBtn.addEventListener('click', playNextSong);
+        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('ended', playNextSong);
+        progressContainer.addEventListener('click', setProgress);
+
+        // Load the first song
+        loadSong(currentSongIndex);
+    </script>
+</body>
+</html>
